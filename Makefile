@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -Iopengl/include
+CFLAGS = -std=c99 -Wall -Wextra -Iinclude -Iopengl/include
 
 # Linux-specific settings
 LDFLAGS_LINUX = -L./opengl/lib_linux -Wl,-rpath,./opengl/lib_linux -lglfw3 -lGLEW -ldl -lm -lGL
