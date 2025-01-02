@@ -5,6 +5,9 @@
 
 #include "shader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 const unsigned int factor = 80;
 const unsigned int WINDOW_WIDTH = factor * 12;
 const unsigned int WINDOW_HEIGHT = factor * 9;
