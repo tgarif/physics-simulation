@@ -3,6 +3,8 @@
 
 unsigned int createShader(const char* vertexFile, const char* fragmentFile);
 
+void setInt(unsigned int shaderID, const char* name, int value);
+
 void detachShader();
 
 void destroyShader(unsigned int shaderID);

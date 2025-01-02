@@ -62,6 +62,10 @@ unsigned int createShader(const char *vertexFile, const char *fragmentFile) {
     return shaderProgram;
 }
 
+void setInt(unsigned int shaderID, const char *name, int value) {
+    glUniform1i(glGetUniformLocation(shaderID, name), value);
+}
+
 void detachShader() {
     glUseProgram(0);
 }
