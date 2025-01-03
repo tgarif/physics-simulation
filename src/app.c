@@ -10,9 +10,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-const unsigned int factor = 80;
-const unsigned int WINDOW_WIDTH = factor * 12;
-const unsigned int WINDOW_HEIGHT = factor * 9;
+#define factor 80
+#define WINDOW_WIDTH (factor * 12)
+#define WINDOW_HEIGHT (factor * 9)
+#define TOTAL_CUBE 10
+#define insertCubePos(idx, x, y, z) (vec3(cubePositions[idx], x, y, z))
 
 // Functions prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -41,32 +43,85 @@ int main() {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    glEnable(GL_DEPTH_TEST);
+
     unsigned int shaderProgram = createShader("shaders/vertex.glsl", "shaders/fragment.glsl");
 
     float vertices[] = {
-        // positions          // texture coords
-        0.5f, 0.5f, 0.0f, 1.0f, 1.0f,    // top right
-        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,  // bottom left
-        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f    // top left
-    };
-    unsigned int indices[] = {
-        0, 1, 3,  // first triangle
-        1, 2, 3   // second triangle
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+        -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f  // Hello
     };
 
-    unsigned int VBO, VAO, EBO;
+    mfloat_t cubePositions[TOTAL_CUBE][VEC3_SIZE];
+
+    insertCubePos(0, 0.0f, 0.0f, 0.0f);
+    insertCubePos(1, 2.0f, 5.0f, -15.0f);
+    insertCubePos(2, -1.5f, -2.2f, -2.5f);
+    insertCubePos(3, -3.8f, -2.0f, -12.3f);
+    insertCubePos(4, 2.4f, -0.4f, -3.5f);
+    insertCubePos(5, -1.7f, 3.0f, -7.5f);
+    insertCubePos(6, 1.3f, -2.0f, -2.5f);
+    insertCubePos(7, 1.5f, 2.0f, -2.5f);
+    insertCubePos(8, 1.5f, 0.2f, -1.5f);
+    insertCubePos(9, -1.3f, 1.0f, -1.5f);
+
+    /* unsigned int indices[] = { */
+    /*     0, 1, 3,  // first triangle */
+    /*     1, 2, 3   // second triangle */
+    /* }; */
+
+    /* unsigned int VBO, VAO, EBO; */
+    unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    /* glGenBuffers(1, &EBO); */
 
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    /* glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); */
+    /* glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); */
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -83,7 +138,7 @@ int main() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int width, height, nrChannels;
@@ -129,7 +184,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         processInput(window);
 
@@ -139,14 +194,6 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, texture2);
 
         glUseProgram(shaderProgram);
-
-        // Model matrix
-        mfloat_t model[MAT4_SIZE];
-        mat4_identity(model);
-        mat4_rotation_x(model, to_radians(-55.0f));
-
-        unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model);
 
         // View matrix
         mfloat_t view[MAT4_SIZE];
@@ -166,7 +213,23 @@ int main() {
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
+        for (size_t i = 0; i < TOTAL_CUBE; ++i) {
+            // Model matrix
+            mfloat_t model[MAT4_SIZE];
+            mfloat_t trans[MAT4_SIZE];
+            mfloat_t axis[VEC3_SIZE];
+            float angle = 20.0f * i;
+            mat4_identity(model);
+            mat4_translate(trans, model, cubePositions[i]);
+            mat4_rotation_axis(model, vec3(axis, 1.0, 0.3, 0.5), to_radians(angle));
+            mat4_multiply(model, trans, model);
+
+            unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model);
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -174,7 +237,7 @@ int main() {
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    /* glDeleteBuffers(1, &EBO); */
     glDeleteProgram(shaderProgram);
 
     glfwTerminate();
