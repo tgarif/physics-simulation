@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "mathc.h"
 #include "shader.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -43,11 +44,11 @@ int main() {
     unsigned int shaderProgram = createShader("shaders/vertex.glsl", "shaders/fragment.glsl");
 
     float vertices[] = {
-        // positions          // colors           // texture coords
-        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,    // top right
-        0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
-        -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f    // top left
+        // positions          // texture coords
+        0.5f, 0.5f, 0.0f, 1.0f, 1.0f,    // top right
+        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,  // bottom left
+        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f    // top left
     };
     unsigned int indices[] = {
         0, 1, 3,  // first triangle
@@ -67,14 +68,11 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
 
     unsigned int texture1, texture2;
 
@@ -112,7 +110,7 @@ int main() {
 
     data = stbi_load("textures/awesomeface.png", &width, &height, &nrChannels, 0);
     if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         fprintf(stderr, "Failed to load texture");
@@ -120,7 +118,7 @@ int main() {
     stbi_image_free(data);
 
     glUseProgram(shaderProgram);
-    glUniform1i(glGetUniformLocation(shaderProgram, "texture1"), 0);
+    setInt(shaderProgram, "texture1", 0);
     setInt(shaderProgram, "texture2", 1);
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
@@ -140,7 +138,17 @@ int main() {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
 
+        mfloat_t trans[MAT4_SIZE];
+        mfloat_t translatedRes[MAT4_SIZE];
+        mfloat_t translate[VEC3_SIZE];
+        mat4_identity(trans);
+        mat4_translate(translatedRes, trans, vec3(translate, 0.5, -0.5, 0.0));
+        mat4_multiply(trans, translatedRes, mat4_rotation_z(trans, (float)glfwGetTime()));
+
         glUseProgram(shaderProgram);
+        unsigned int transformLoc = glGetUniformLocation(shaderProgram, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, trans);
+
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
