@@ -138,16 +138,32 @@ int main() {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
 
-        mfloat_t trans[MAT4_SIZE];
-        mfloat_t translatedRes[MAT4_SIZE];
-        mfloat_t translate[VEC3_SIZE];
-        mat4_identity(trans);
-        mat4_translate(translatedRes, trans, vec3(translate, 0.5, -0.5, 0.0));
-        mat4_multiply(trans, translatedRes, mat4_rotation_z(trans, (float)glfwGetTime()));
-
         glUseProgram(shaderProgram);
-        unsigned int transformLoc = glGetUniformLocation(shaderProgram, "transform");
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, trans);
+
+        // Model matrix
+        mfloat_t model[MAT4_SIZE];
+        mat4_identity(model);
+        mat4_rotation_x(model, to_radians(-55.0f));
+
+        unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model);
+
+        // View matrix
+        mfloat_t view[MAT4_SIZE];
+        mfloat_t translate[VEC3_SIZE];
+        mat4_identity(view);
+        mat4_translate(view, view, vec3(translate, 0.0f, 0.0f, -3.0f));
+
+        unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
+
+        // Projection matrix
+        mfloat_t projection[MAT4_SIZE];
+        mat4_identity(projection);
+        mat4_perspective(projection, to_radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+
+        unsigned int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection);
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
