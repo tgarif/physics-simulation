@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "file.h"
 
@@ -12,8 +13,8 @@ unsigned int createShader(const char *vertexFile, const char *fragmentFile) {
 
     // Create a shader object and compile it during runtime
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    const char *vertexShaderSource = readFile(vertexFile);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    char *vertexShaderSource = readFile(vertexFile);
+    glShaderSource(vertexShader, 1, (const char **)&vertexShaderSource, NULL);
     glCompileShader(vertexShader);
 
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
@@ -25,10 +26,12 @@ unsigned int createShader(const char *vertexFile, const char *fragmentFile) {
         fprintf(stderr, "Vertex Shader: %s\n", infoLog);
     }
 
+    free(vertexShaderSource);
+
     // Perform the same steps for the fragment shader
     unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fragmentShaderSource = readFile(fragmentFile);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    char *fragmentShaderSource = readFile(fragmentFile);
+    glShaderSource(fragmentShader, 1, (const char **)&fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
 
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
@@ -39,6 +42,8 @@ unsigned int createShader(const char *vertexFile, const char *fragmentFile) {
         glDeleteShader(fragmentShader);
         fprintf(stderr, "Fragment Shader: %s\n", infoLog);
     }
+
+    free(fragmentShaderSource);
 
     // Create a shader program and link the two shader steps together
     unsigned int shaderProgram = glCreateProgram();
