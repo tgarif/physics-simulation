@@ -16,6 +16,12 @@
 #define TOTAL_CUBE 10
 #define insertCubePos(idx, x, y, z) (vec3(cubePositions[idx], x, y, z))
 
+mfloat_t cameraPos[VEC3_SIZE];
+mfloat_t cameraFront[VEC3_SIZE];
+mfloat_t cameraUp[VEC3_SIZE];
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
 // Functions prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -92,6 +98,10 @@ int main() {
     };
 
     mfloat_t cubePositions[TOTAL_CUBE][VEC3_SIZE];
+
+    vec3(cameraPos, 0.0f, 0.0f, 3.0f);
+    vec3(cameraFront, 0.0f, 0.0f, -1.0f);
+    vec3(cameraUp, 0.0f, 1.0f, 0.0f);
 
     insertCubePos(0, 0.0f, 0.0f, 0.0f);
     insertCubePos(1, 2.0f, 5.0f, -15.0f);
@@ -183,6 +193,10 @@ int main() {
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
 
     while (!glfwWindowShouldClose(window)) {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -197,9 +211,8 @@ int main() {
 
         // View matrix
         mfloat_t view[MAT4_SIZE];
-        mfloat_t translate[VEC3_SIZE];
-        mat4_identity(view);
-        mat4_translate(view, view, vec3(translate, 0.0f, 0.0f, -3.0f));
+        mfloat_t target[VEC3_SIZE];
+        mat4_look_at(view, cameraPos, vec3_add(target, cameraPos, cameraFront), cameraUp);
 
         unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
@@ -252,6 +265,18 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void processInput(GLFWwindow* window) {
+    const float cameraSpeed = 2.5f * deltaTime;
+    mfloat_t multiply[VEC3_SIZE];
+    mfloat_t cross[VEC3_SIZE];
+    mfloat_t normalize[VEC3_SIZE];
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, 1);
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        vec3_add(cameraPos, cameraPos, vec3_multiply_f(multiply, cameraFront, cameraSpeed));
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        vec3_subtract(cameraPos, cameraPos, vec3_multiply_f(multiply, cameraFront, cameraSpeed));
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        vec3_subtract(cameraPos, cameraPos, vec3_multiply_f(multiply, vec3_normalize(normalize, vec3_cross(cross, cameraFront, cameraUp)), cameraSpeed));
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        vec3_add(cameraPos, cameraPos, vec3_multiply_f(multiply, vec3_normalize(normalize, vec3_cross(cross, cameraFront, cameraUp)), cameraSpeed));
 }
