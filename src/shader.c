@@ -71,6 +71,22 @@ void setInt(unsigned int shaderID, const char *name, int value) {
     glUniform1i(glGetUniformLocation(shaderID, name), value);
 }
 
+void setFloat(unsigned int shaderID, const char *name, float value) {
+    glUniform1f(glGetUniformLocation(shaderID, name), value);
+}
+
+void setVec3f(unsigned int shaderID, const char *name, float x, float y, float z) {
+    glUniform3f(glGetUniformLocation(shaderID, name), x, y, z);
+}
+
+void setVec3fv(unsigned int shaderID, const char *name, mfloat_t *v) {
+    glUniform3fv(glGetUniformLocation(shaderID, name), 1, v);
+}
+
+void setMat4fv(unsigned int shaderID, const char *name, mfloat_t *m) {
+    glUniformMatrix4fv(glGetUniformLocation(shaderID, name), 1, GL_FALSE, m);
+}
+
 void detachShader() {
     glUseProgram(0);
 }

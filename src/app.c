@@ -32,8 +32,8 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 int main() {
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -147,38 +147,56 @@ int main() {
         processInput(window);
 
         glUseProgram(lightingShader);
-        glUniform3f(glGetUniformLocation(lightingShader, "objectColor"), 1.0f, 0.5f, 0.31f);
-        glUniform3f(glGetUniformLocation(lightingShader, "lightColor"), 1.0f, 1.0f, 1.0f);
-        glUniform3fv(glGetUniformLocation(lightingShader, "lightPos"), 1, lightPos);
-        glUniform3fv(glGetUniformLocation(lightingShader, "viewPos"), 1, camera->position);
+        setVec3f(lightingShader, "objectColor", 1.0f, 0.5f, 0.31f);
+        setVec3f(lightingShader, "lightColor", 1.0f, 1.0f, 1.0f);
+        setVec3fv(lightingShader, "viewPos", camera->position);
+        setVec3f(lightingShader, "material.ambient", 1.0f, 0.5f, 0.31f);
+        setVec3f(lightingShader, "material.diffuse", 1.0f, 0.5f, 0.31f);
+        setVec3f(lightingShader, "material.specular", 0.5f, 0.5f, 0.5f);
+        setFloat(lightingShader, "material.shininess", 32.0f);
+        setVec3fv(lightingShader, "light.position", lightPos);
+        setVec3f(lightingShader, "light.specular", 1.0f, 1.0f, 1.0f);
+
+        mfloat_t lightColor[VEC3_SIZE];
+        lightColor[0] = MSIN(glfwGetTime() * 2.0f);
+        lightColor[1] = MSIN(glfwGetTime() * 0.7f);
+        lightColor[2] = MSIN(glfwGetTime() * 1.3f);
+
+        mfloat_t diffuseColor[VEC3_SIZE];
+        vec3_multiply(diffuseColor, lightColor, (mfloat_t[]){0.5f, 0.5f, 0.5f});
+        mfloat_t ambientColor[VEC3_SIZE];
+        vec3_multiply(ambientColor, diffuseColor, (mfloat_t[]){0.2f, 0.2f, 0.2f});
+
+        setVec3fv(lightingShader, "light.ambient", ambientColor);
+        setVec3fv(lightingShader, "light.diffuse", diffuseColor);
 
         // Projection matrix
         mfloat_t projection[MAT4_SIZE];
         mat4_identity(projection);
         mat4_perspective(projection, MRADIANS(camera->zoom), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader, "projection"), 1, GL_FALSE, projection);
+        setMat4fv(lightingShader, "projection", projection);
 
         // View matrix
         mfloat_t view[MAT4_SIZE];
         getViewMatrix(camera, view);
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader, "view"), 1, GL_FALSE, view);
+        setMat4fv(lightingShader, "view", view);
 
         mfloat_t model[MAT4_SIZE];
         mat4_identity(model);
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader, "model"), 1, GL_FALSE, model);
+        setMat4fv(lightingShader, "model", model);
 
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         glUseProgram(lightCubeShader);
-        glUniformMatrix4fv(glGetUniformLocation(lightCubeShader, "projection"), 1, GL_FALSE, projection);
-        glUniformMatrix4fv(glGetUniformLocation(lightCubeShader, "view"), 1, GL_FALSE, view);
+        setMat4fv(lightCubeShader, "projection", projection);
+        setMat4fv(lightCubeShader, "view", view);
         mfloat_t translated[MAT4_SIZE];
         mfloat_t scaled[MAT4_SIZE];
         mat4_translate(translated, model, lightPos);
         mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f});
         mat4_multiply(model, translated, scaled);
-        glUniformMatrix4fv(glGetUniformLocation(lightCubeShader, "model"), 1, GL_FALSE, model);
+        setMat4fv(lightCubeShader, "model", model);
 
         glBindVertexArray(lightCubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);

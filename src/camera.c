@@ -40,8 +40,6 @@ mfloat_t* getViewMatrix(Camera* camera, mfloat_t* viewMatrix) {
 void processKeyboard(Camera* camera, enum Camera_Movement direction, float deltaTime) {
     float velocity = camera->movementSpeed * deltaTime;
     mfloat_t multiply[VEC3_SIZE];
-    mfloat_t cross[VEC3_SIZE];
-    mfloat_t normalize[VEC3_SIZE];
     if (direction == FORWARD)
         vec3_add(camera->position, camera->position, vec3_multiply_f(multiply, camera->forward, velocity));
     if (direction == BACKWARD)
