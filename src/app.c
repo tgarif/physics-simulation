@@ -19,12 +19,20 @@
 mfloat_t cameraPos[VEC3_SIZE];
 mfloat_t cameraFront[VEC3_SIZE];
 mfloat_t cameraUp[VEC3_SIZE];
+
+bool firstMouse = true;
+float yaw = -90.0f, pitch = 0.0f;
+float lastX = (float)WINDOW_WIDTH / 2.0, lastY = (float)WINDOW_HEIGHT / 2.0;
+float fov = 45.0f;
+
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // Functions prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 int main() {
     glfwInit();
@@ -40,14 +48,17 @@ int main() {
     }
 
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     if (glewInit() != GLEW_OK) {
         fprintf(stderr, "Failed to initialize GLEW\n");
         glfwTerminate();
         return EXIT_FAILURE;
     }
-
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -193,7 +204,7 @@ int main() {
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
 
     while (!glfwWindowShouldClose(window)) {
-        float currentFrame = glfwGetTime();
+        float currentFrame = (float)glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
@@ -220,7 +231,7 @@ int main() {
         // Projection matrix
         mfloat_t projection[MAT4_SIZE];
         mat4_identity(projection);
-        mat4_perspective(projection, to_radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+        mat4_perspective(projection, to_radians(fov), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
         unsigned int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection);
@@ -279,4 +290,46 @@ void processInput(GLFWwindow* window) {
         vec3_subtract(cameraPos, cameraPos, vec3_multiply_f(multiply, vec3_normalize(normalize, vec3_cross(cross, cameraFront, cameraUp)), cameraSpeed));
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         vec3_add(cameraPos, cameraPos, vec3_multiply_f(multiply, vec3_normalize(normalize, vec3_cross(cross, cameraFront, cameraUp)), cameraSpeed));
+}
+
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+    float xpos = (float)xposIn;
+    float ypos = (float)yposIn;
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    const float sensitivity = 0.1f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    mfloat_t direction[VEC3_SIZE];
+    direction[0] = cos(to_radians(yaw)) * cos(to_radians(pitch));
+    direction[1] = sin(to_radians(pitch));
+    direction[2] = sin(to_radians(yaw)) * cos(to_radians(pitch));
+    vec3_normalize(cameraFront, direction);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    fov -= (float)yoffset;
+    if (fov < 1.0f)
+        fov = 1.0f;
+    if (fov > 45.0f)
+        fov = 45.0f;
 }
