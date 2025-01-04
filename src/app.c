@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "camera.h"
 #include "mathc.h"
 #include "shader.h"
 
@@ -16,14 +17,9 @@
 #define TOTAL_CUBE 10
 #define insertCubePos(idx, x, y, z) (vec3(cubePositions[idx], x, y, z))
 
-mfloat_t cameraPos[VEC3_SIZE];
-mfloat_t cameraFront[VEC3_SIZE];
-mfloat_t cameraUp[VEC3_SIZE];
-
+Camera* camera;
 bool firstMouse = true;
-float yaw = -90.0f, pitch = 0.0f;
 float lastX = (float)WINDOW_WIDTH / 2.0, lastY = (float)WINDOW_HEIGHT / 2.0;
-float fov = 45.0f;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -110,10 +106,6 @@ int main() {
 
     mfloat_t cubePositions[TOTAL_CUBE][VEC3_SIZE];
 
-    vec3(cameraPos, 0.0f, 0.0f, 3.0f);
-    vec3(cameraFront, 0.0f, 0.0f, -1.0f);
-    vec3(cameraUp, 0.0f, 1.0f, 0.0f);
-
     insertCubePos(0, 0.0f, 0.0f, 0.0f);
     insertCubePos(1, 2.0f, 5.0f, -15.0f);
     insertCubePos(2, -1.5f, -2.2f, -2.5f);
@@ -125,24 +117,14 @@ int main() {
     insertCubePos(8, 1.5f, 0.2f, -1.5f);
     insertCubePos(9, -1.3f, 1.0f, -1.5f);
 
-    /* unsigned int indices[] = { */
-    /*     0, 1, 3,  // first triangle */
-    /*     1, 2, 3   // second triangle */
-    /* }; */
-
-    /* unsigned int VBO, VAO, EBO; */
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    /* glGenBuffers(1, &EBO); */
 
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    /* glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); */
-    /* glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); */
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -197,6 +179,8 @@ int main() {
     setInt(shaderProgram, "texture1", 0);
     setInt(shaderProgram, "texture2", 1);
 
+    camera = createCamera((mfloat_t[]){0.0f, 0.0f, 3.0f});
+
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
     // glBindVertexArray(0);
@@ -220,21 +204,20 @@ int main() {
 
         glUseProgram(shaderProgram);
 
-        // View matrix
-        mfloat_t view[MAT4_SIZE];
-        mfloat_t target[VEC3_SIZE];
-        mat4_look_at(view, cameraPos, vec3_add(target, cameraPos, cameraFront), cameraUp);
-
-        unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
-
         // Projection matrix
         mfloat_t projection[MAT4_SIZE];
         mat4_identity(projection);
-        mat4_perspective(projection, to_radians(fov), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+        mat4_perspective(projection, MRADIANS(camera->zoom), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
         unsigned int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection);
+
+        // View matrix
+        mfloat_t view[MAT4_SIZE];
+        getViewMatrix(camera, view);
+
+        unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
 
         glBindVertexArray(VAO);
         /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
@@ -264,6 +247,8 @@ int main() {
     /* glDeleteBuffers(1, &EBO); */
     glDeleteProgram(shaderProgram);
 
+    free(camera);
+
     glfwTerminate();
     return EXIT_SUCCESS;
 }
@@ -276,20 +261,17 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void processInput(GLFWwindow* window) {
-    const float cameraSpeed = 2.5f * deltaTime;
-    mfloat_t multiply[VEC3_SIZE];
-    mfloat_t cross[VEC3_SIZE];
-    mfloat_t normalize[VEC3_SIZE];
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, 1);
+
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        vec3_add(cameraPos, cameraPos, vec3_multiply_f(multiply, cameraFront, cameraSpeed));
+        processKeyboard(camera, FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        vec3_subtract(cameraPos, cameraPos, vec3_multiply_f(multiply, cameraFront, cameraSpeed));
+        processKeyboard(camera, BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        vec3_subtract(cameraPos, cameraPos, vec3_multiply_f(multiply, vec3_normalize(normalize, vec3_cross(cross, cameraFront, cameraUp)), cameraSpeed));
+        processKeyboard(camera, LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        vec3_add(cameraPos, cameraPos, vec3_multiply_f(multiply, vec3_normalize(normalize, vec3_cross(cross, cameraFront, cameraUp)), cameraSpeed));
+        processKeyboard(camera, RIGHT, deltaTime);
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -304,32 +286,13 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 
     float xoffset = xpos - lastX;
     float yoffset = lastY - ypos;
+
     lastX = xpos;
     lastY = ypos;
 
-    const float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    mfloat_t direction[VEC3_SIZE];
-    direction[0] = cos(to_radians(yaw)) * cos(to_radians(pitch));
-    direction[1] = sin(to_radians(pitch));
-    direction[2] = sin(to_radians(yaw)) * cos(to_radians(pitch));
-    vec3_normalize(cameraFront, direction);
+    processMouseMovement(camera, xoffset, yoffset, true);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    fov -= (float)yoffset;
-    if (fov < 1.0f)
-        fov = 1.0f;
-    if (fov > 45.0f)
-        fov = 45.0f;
+    processMouseScroll(camera, (float)yoffset);
 }
