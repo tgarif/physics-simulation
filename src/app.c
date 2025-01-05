@@ -14,6 +14,8 @@
 #define factor 80
 #define WINDOW_WIDTH (factor * 12)
 #define WINDOW_HEIGHT (factor * 9)
+#define TOTAL_CUBE 10
+#define insertCubePos(idx, x, y, z) (vec3(cubePositions[idx], x, y, z))
 
 Camera* camera;
 bool firstMouse = true;
@@ -107,6 +109,18 @@ int main() {
         -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f  // Hello
     };
 
+    mfloat_t cubePositions[TOTAL_CUBE][VEC3_SIZE];
+    insertCubePos(0, 0.0f, 0.0f, 0.0f);
+    insertCubePos(1, 2.0f, 5.0f, -15.0f);
+    insertCubePos(2, -1.5f, -2.2f, -2.5f);
+    insertCubePos(3, -3.8f, -2.0f, -12.3f);
+    insertCubePos(4, 2.4f, -0.4f, -3.5f);
+    insertCubePos(5, -1.7f, 3.0f, -7.5f);
+    insertCubePos(6, 1.3f, -2.0f, -2.5f);
+    insertCubePos(7, 1.5f, 2.0f, -2.5f);
+    insertCubePos(8, 1.5f, 0.2f, -1.5f);
+    insertCubePos(9, -1.3f, 1.0f, -1.5f);
+
     unsigned int VBO, cubeVAO, lightCubeVAO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &VBO);
@@ -132,14 +146,12 @@ int main() {
 
     unsigned int diffuseMap = loadTexture("textures/container2.png");
     unsigned int specularMap = loadTexture("textures/container2_specular.png");
-    unsigned int emissionMap = loadTexture("textures/container3_specular.png");
 
     camera = createCamera((mfloat_t[]){0.0f, 0.0f, 3.0f});
 
     glUseProgram(lightingShader);
     setInt(lightingShader, "material.diffuse", 0);
     setInt(lightingShader, "material.specular", 1);
-    setInt(lightingShader, "material.emission", 2);
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
@@ -158,7 +170,8 @@ int main() {
         processInput(window);
 
         glUseProgram(lightingShader);
-        setVec3fv(lightingShader, "light.position", lightPos);
+        /* setVec3fv(lightingShader, "light.position", lightPos); */
+        setVec3f(lightingShader, "light.direction", -0.2f, -1.0f, -0.3f);
         setVec3fv(lightingShader, "viewPos", camera->position);
 
         setVec3f(lightingShader, "light.ambient", 0.2f, 0.2f, 0.2f);
@@ -186,24 +199,36 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularMap);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, emissionMap);
+
+        /* glBindVertexArray(cubeVAO); */
+        /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
         glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (size_t i = 0; i < TOTAL_CUBE; ++i) {
+            mat4_identity(model);
+            mfloat_t translated[MAT4_SIZE];
+            mfloat_t rotated[MAT4_SIZE];
+            mat4_translate(translated, model, cubePositions[i]);
+            float angle = 20.0f * i;
+            mat4_rotation_axis(rotated, (mfloat_t[]){1.0f, 0.3f, 0.5f}, MRADIANS(angle));
+            mat4_multiply(model, translated, rotated);
+            setMat4fv(lightingShader, "model", model);
 
-        glUseProgram(lightCubeShader);
-        setMat4fv(lightCubeShader, "projection", projection);
-        setMat4fv(lightCubeShader, "view", view);
-        mfloat_t translated[MAT4_SIZE];
-        mfloat_t scaled[MAT4_SIZE];
-        mat4_translate(translated, model, lightPos);
-        mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f});
-        mat4_multiply(model, translated, scaled);
-        setMat4fv(lightCubeShader, "model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
-        glBindVertexArray(lightCubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        /* glUseProgram(lightCubeShader); */
+        /* setMat4fv(lightCubeShader, "projection", projection); */
+        /* setMat4fv(lightCubeShader, "view", view); */
+        /* mfloat_t translated[MAT4_SIZE]; */
+        /* mfloat_t scaled[MAT4_SIZE]; */
+        /* mat4_translate(translated, model, lightPos); */
+        /* mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f}); */
+        /* mat4_multiply(model, translated, scaled); */
+        /* setMat4fv(lightCubeShader, "model", model); */
+
+        /* glBindVertexArray(lightCubeVAO); */
+        /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
         glfwSwapBuffers(window);
         glfwPollEvents();
