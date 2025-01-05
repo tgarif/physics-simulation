@@ -1,0 +1,74 @@
+#include "util.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* readFile(const char* filename) {
+    FILE* fp;
+    long size = 0;
+    char* content;
+
+    /* Read File to get size */
+    fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        fprintf(stderr, "Couldn't open file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+    fseek(fp, 0, SEEK_END);
+    size = ftell(fp) + 1;
+    fclose(fp);
+
+    /* Read File for Content */
+    fp = fopen(filename, "r");
+    content = malloc(size);
+    fread(content, 1, size - 1, fp);
+    content[size - 1] = '\0';
+    fclose(fp);
+
+    return content;
+}
+
+void initialize(DynamicArray* dynArray, size_t initialCapacity, size_t elementSize) {
+    dynArray->array = malloc(initialCapacity * elementSize);
+    dynArray->size = 0;
+    dynArray->capacity = initialCapacity;
+    dynArray->elementSize = elementSize;
+}
+
+void push(DynamicArray* dynArray, const void* value) {
+    if (dynArray->size == dynArray->capacity) {
+        dynArray->capacity *= 2;
+        dynArray->array = realloc(dynArray->array, dynArray->capacity * dynArray->elementSize);
+    }
+    memcpy((char*)dynArray->array + dynArray->size * dynArray->elementSize, value, dynArray->elementSize);
+    dynArray->size++;
+}
+
+void insert(DynamicArray* dynArray, size_t position, const void* start, size_t count) {
+    if (position > dynArray->size) {
+        fprintf(stderr, "Error: Insert position out of bounds.\n");
+        return;
+    }
+
+    while (dynArray->size + count > dynArray->capacity) {
+        dynArray->capacity *= 2;
+        dynArray->array = realloc(dynArray->array, dynArray->capacity * dynArray->elementSize);
+    }
+
+    // Shift elements to the right to make space for the new range
+    char* base = (char*)dynArray->array;
+    memmove(base + (position + count) * dynArray->elementSize,
+        base + position * dynArray->elementSize,
+        (dynArray->size - position) * dynArray->elementSize);
+
+    memcpy(base + position * dynArray->elementSize, start, count * dynArray->elementSize);
+
+    dynArray->size += count;
+}
+
+void cleanup(DynamicArray* dynArray) {
+    free(dynArray->array);
+    dynArray->array = NULL;
+    dynArray->size = dynArray->capacity = dynArray->elementSize = 0;
+}

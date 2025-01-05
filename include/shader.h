@@ -2,6 +2,7 @@
 #define SHADER_H_
 
 #include "mathc.h"
+
 unsigned int createShader(const char* vertexFile, const char* fragmentFile);
 void setInt(unsigned int shaderID, const char* name, int value);
 void setFloat(unsigned int shaderID, const char* name, float value);

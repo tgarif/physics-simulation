@@ -1,14 +1,17 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -Iinclude -Iopengl/include
+CFLAGS = -std=c11 -Wall -Wextra -Iinclude -Iopengl/include -Iassimp/include
 
 # Linux-specific settings
-LDFLAGS_LINUX = -L./opengl/lib_linux -Wl,-rpath,./opengl/lib_linux -lglfw3 -lGLEW -ldl -lm -lGL
+LDFLAGS_LINUX = -L./opengl/lib_linux -L./assimp/lib_linux \
+				-Wl,-rpath,./opengl/lib_linux -Wl,-rpath,./assimp/lib_linux \
+				-lglfw3 -lGLEW -ldl -lm -lGL -lassimp
 BUILDDIR_LINUX = build_linux
 TARGET_LINUX = $(BUILDDIR_LINUX)/physics-simulation
 
 # Windows-specific settings
-LDFLAGS_WINDOWS = -L./opengl/lib_windows -lglfw3 -lglew32 -lopengl32 -lgdi32 -luser32 -lkernel32
+LDFLAGS_WINDOWS = -L./opengl/lib_windows -L./assimp/lib_windows \
+				  -lglfw3 -lglew32 -lopengl32 -lgdi32 -luser32 -lkernel32 -lassimp
 BUILDDIR_WINDOWS = build_windows
 TARGET_WINDOWS = $(BUILDDIR_WINDOWS)/physics-simulation.exe
 
@@ -38,6 +41,9 @@ $(TARGET_WINDOWS): $(SRC)
 run_linux:
 	./$(TARGET_LINUX)
 
+run_linux_debug:
+	gdb ./$(TARGET_LINUX)
+
 run_windows:
 	wine ./$(TARGET_WINDOWS)
 
@@ -47,4 +53,4 @@ clean:
 
 rebuild: clean all
 
-.PHONY: all clean rebuild linux windows run_linux run_windows
+.PHONY: all clean rebuild linux windows run_linux run_windows run_linux_debug

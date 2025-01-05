@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "file.h"
+#include "util.h"
 
 unsigned int createShader(const char *vertexFile, const char *fragmentFile) {
     GLint success = 0;
