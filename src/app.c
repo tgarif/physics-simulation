@@ -170,13 +170,16 @@ int main() {
         processInput(window);
 
         glUseProgram(lightingShader);
-        /* setVec3fv(lightingShader, "light.position", lightPos); */
-        setVec3f(lightingShader, "light.direction", -0.2f, -1.0f, -0.3f);
+        setVec3fv(lightingShader, "light.position", lightPos);
+        /* setVec3f(lightingShader, "light.direction", -0.2f, -1.0f, -0.3f); */
         setVec3fv(lightingShader, "viewPos", camera->position);
 
         setVec3f(lightingShader, "light.ambient", 0.2f, 0.2f, 0.2f);
         setVec3f(lightingShader, "light.diffuse", 0.5f, 0.5f, 0.5f);
         setVec3f(lightingShader, "light.specular", 1.0f, 1.0f, 1.0f);
+        setFloat(lightingShader, "light.constant", 1.0f);
+        setFloat(lightingShader, "light.linear", 0.09f);
+        setFloat(lightingShader, "light.quadratic", 0.032f);
 
         setFloat(lightingShader, "material.shininess", 64.0f);
 
@@ -217,18 +220,19 @@ int main() {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        /* glUseProgram(lightCubeShader); */
-        /* setMat4fv(lightCubeShader, "projection", projection); */
-        /* setMat4fv(lightCubeShader, "view", view); */
-        /* mfloat_t translated[MAT4_SIZE]; */
-        /* mfloat_t scaled[MAT4_SIZE]; */
-        /* mat4_translate(translated, model, lightPos); */
-        /* mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f}); */
-        /* mat4_multiply(model, translated, scaled); */
-        /* setMat4fv(lightCubeShader, "model", model); */
+        glUseProgram(lightCubeShader);
+        setMat4fv(lightCubeShader, "projection", projection);
+        setMat4fv(lightCubeShader, "view", view);
+        mfloat_t translated[MAT4_SIZE];
+        mfloat_t scaled[MAT4_SIZE];
+        mat4_identity(model);
+        mat4_translate(translated, model, lightPos);
+        mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f});
+        mat4_multiply(model, translated, scaled);
+        setMat4fv(lightCubeShader, "model", model);
 
-        /* glBindVertexArray(lightCubeVAO); */
-        /* glDrawArrays(GL_TRIANGLES, 0, 36); */
+        glBindVertexArray(lightCubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
