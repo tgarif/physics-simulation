@@ -15,7 +15,7 @@
 #define WINDOW_WIDTH (factor * 12)
 #define WINDOW_HEIGHT (factor * 9)
 #define TOTAL_CUBE 10
-#define insertCubePos(idx, x, y, z) (vec3(cubePositions[idx], x, y, z))
+#define TOTAL_POINT_LIGHTS 4
 
 Camera* camera;
 bool firstMouse = true;
@@ -106,20 +106,28 @@ int main() {
         0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
         0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
         -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f  // Hello
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // Hello
     };
 
-    mfloat_t cubePositions[TOTAL_CUBE][VEC3_SIZE];
-    insertCubePos(0, 0.0f, 0.0f, 0.0f);
-    insertCubePos(1, 2.0f, 5.0f, -15.0f);
-    insertCubePos(2, -1.5f, -2.2f, -2.5f);
-    insertCubePos(3, -3.8f, -2.0f, -12.3f);
-    insertCubePos(4, 2.4f, -0.4f, -3.5f);
-    insertCubePos(5, -1.7f, 3.0f, -7.5f);
-    insertCubePos(6, 1.3f, -2.0f, -2.5f);
-    insertCubePos(7, 1.5f, 2.0f, -2.5f);
-    insertCubePos(8, 1.5f, 0.2f, -1.5f);
-    insertCubePos(9, -1.3f, 1.0f, -1.5f);
+    mfloat_t* cubePositions[TOTAL_CUBE] = {
+        (mfloat_t[]){0.0f, 0.0f, 0.0f},
+        (mfloat_t[]){2.0f, 5.0f, -15.0f},
+        (mfloat_t[]){-1.5f, -2.2f, -2.5f},
+        (mfloat_t[]){-3.8f, -2.0f, -12.3f},
+        (mfloat_t[]){2.4f, -0.4f, -3.5f},
+        (mfloat_t[]){-1.7f, 3.0f, -7.5f},
+        (mfloat_t[]){1.3f, -2.0f, -2.5f},
+        (mfloat_t[]){1.5f, 2.0f, -2.5f},
+        (mfloat_t[]){1.5f, 0.2f, -1.5f},
+        (mfloat_t[]){-1.3f, 1.0f, -1.5f},
+    };
+
+    mfloat_t* pointLightPositions[TOTAL_POINT_LIGHTS] = {
+        (mfloat_t[]){0.7f, 0.2f, 2.0f},
+        (mfloat_t[]){2.3f, -3.3f, -4.0f},
+        (mfloat_t[]){-4.0f, 2.0f, -12.0f},
+        (mfloat_t[]){0.0f, 0.0f, -3.0f},
+    };
 
     unsigned int VBO, cubeVAO, lightCubeVAO;
     glGenVertexArrays(1, &cubeVAO);
@@ -170,20 +178,57 @@ int main() {
         processInput(window);
 
         glUseProgram(lightingShader);
-        setVec3fv(lightingShader, "light.position", camera->position);
-        setVec3fv(lightingShader, "light.direction", camera->forward);
-        setFloat(lightingShader, "light.cutOff", MCOS(MRADIANS(12.5f)));
-        setFloat(lightingShader, "light.outerCutOff", MCOS(MRADIANS(17.5f)));
         setVec3fv(lightingShader, "viewPos", camera->position);
-
-        setVec3f(lightingShader, "light.ambient", 0.1f, 0.1f, 0.1f);
-        setVec3f(lightingShader, "light.diffuse", 0.8f, 0.8f, 0.8f);
-        setVec3f(lightingShader, "light.specular", 1.0f, 1.0f, 1.0f);
-        setFloat(lightingShader, "light.constant", 1.0f);
-        setFloat(lightingShader, "light.linear", 0.09f);
-        setFloat(lightingShader, "light.quadratic", 0.032f);
-
         setFloat(lightingShader, "material.shininess", 32.0f);
+
+        // Directional light
+        setVec3f(lightingShader, "dirLight.direction", -0.2f, -1.0f, -0.3f);
+        setVec3f(lightingShader, "dirLight.ambient", 0.05f, 0.05f, 0.05f);
+        setVec3f(lightingShader, "dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        setVec3f(lightingShader, "dirLight.specular", 0.5f, 0.5f, 0.5f);
+        // Point light 1
+        setVec3fv(lightingShader, "pointLights[0].position", pointLightPositions[0]);
+        setVec3f(lightingShader, "pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+        setVec3f(lightingShader, "pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+        setVec3f(lightingShader, "pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+        setFloat(lightingShader, "pointLights[0].constant", 1.0f);
+        setFloat(lightingShader, "pointLights[0].linear", 0.09f);
+        setFloat(lightingShader, "pointLights[0].quadratic", 0.032f);
+        // point light 2
+        setVec3fv(lightingShader, "pointLights[1].position", pointLightPositions[1]);
+        setVec3f(lightingShader, "pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+        setVec3f(lightingShader, "pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+        setVec3f(lightingShader, "pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+        setFloat(lightingShader, "pointLights[1].constant", 1.0f);
+        setFloat(lightingShader, "pointLights[1].linear", 0.09f);
+        setFloat(lightingShader, "pointLights[1].quadratic", 0.032f);
+        // point light 3
+        setVec3fv(lightingShader, "pointLights[2].position", pointLightPositions[2]);
+        setVec3f(lightingShader, "pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
+        setVec3f(lightingShader, "pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
+        setVec3f(lightingShader, "pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+        setFloat(lightingShader, "pointLights[2].constant", 1.0f);
+        setFloat(lightingShader, "pointLights[2].linear", 0.09f);
+        setFloat(lightingShader, "pointLights[2].quadratic", 0.032f);
+        // point light 4
+        setVec3fv(lightingShader, "pointLights[3].position", pointLightPositions[3]);
+        setVec3f(lightingShader, "pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
+        setVec3f(lightingShader, "pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
+        setVec3f(lightingShader, "pointLights[3].specular", 1.0f, 1.0f, 1.0f);
+        setFloat(lightingShader, "pointLights[3].constant", 1.0f);
+        setFloat(lightingShader, "pointLights[3].linear", 0.09f);
+        setFloat(lightingShader, "pointLights[3].quadratic", 0.032f);
+        // spotLight
+        setVec3fv(lightingShader, "spotLight.position", camera->position);
+        setVec3fv(lightingShader, "spotLight.direction", camera->forward);
+        setVec3f(lightingShader, "spotLight.ambient", 0.0f, 0.0f, 0.0f);
+        setVec3f(lightingShader, "spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+        setVec3f(lightingShader, "spotLight.specular", 1.0f, 1.0f, 1.0f);
+        setFloat(lightingShader, "spotLight.constant", 1.0f);
+        setFloat(lightingShader, "spotLight.linear", 0.09f);
+        setFloat(lightingShader, "spotLight.quadratic", 0.032f);
+        setFloat(lightingShader, "spotLight.cutOff", MCOS(MRADIANS(12.5f)));
+        setFloat(lightingShader, "spotLight.outerCutOff", MCOS(MRADIANS(15.0f)));
 
         // Projection matrix
         mfloat_t projection[MAT4_SIZE];
@@ -219,19 +264,22 @@ int main() {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        /* glUseProgram(lightCubeShader); */
-        /* setMat4fv(lightCubeShader, "projection", projection); */
-        /* setMat4fv(lightCubeShader, "view", view); */
-        /* mfloat_t translated[MAT4_SIZE]; */
-        /* mfloat_t scaled[MAT4_SIZE]; */
-        /* mat4_identity(model); */
-        /* mat4_translate(translated, model, lightPos); */
-        /* mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f}); */
-        /* mat4_multiply(model, translated, scaled); */
-        /* setMat4fv(lightCubeShader, "model", model); */
+        glUseProgram(lightCubeShader);
+        setMat4fv(lightCubeShader, "projection", projection);
+        setMat4fv(lightCubeShader, "view", view);
 
-        /* glBindVertexArray(lightCubeVAO); */
-        /* glDrawArrays(GL_TRIANGLES, 0, 36); */
+        glBindVertexArray(lightCubeVAO);
+        for (size_t i = 0; i < TOTAL_POINT_LIGHTS; ++i) {
+            mfloat_t translated[MAT4_SIZE];
+            mfloat_t scaled[MAT4_SIZE];
+            mat4_identity(model);
+            mat4_translate(translated, model, pointLightPositions[i]);
+            mat4_scale(scaled, model, (mfloat_t[]){0.2f, 0.2f, 0.2f});
+            mat4_multiply(model, translated, scaled);
+            setMat4fv(lightCubeShader, "model", model);
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
