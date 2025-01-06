@@ -23,10 +23,10 @@ void setupMesh(Mesh* mesh) {
 
     glBindVertexArray(mesh->VAO);
     glBindBuffer(GL_ARRAY_BUFFER, mesh->VBO);
-    glBufferData(GL_ARRAY_BUFFER, mesh->vertices->size * sizeof(Vertex), &mesh->vertices->array[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mesh->vertices->size * sizeof(Vertex), (Vertex*)&mesh->vertices->array, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices->size * sizeof(unsigned int), &mesh->indices->array[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices->size * sizeof(unsigned int), (unsigned int*)&mesh->indices->array, GL_STATIC_DRAW);
 
     // vertex Positions
     glEnableVertexAttribArray(0);
