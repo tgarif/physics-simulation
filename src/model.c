@@ -162,7 +162,6 @@ Mesh* processMesh(Model* model, struct aiMesh* mesh, const struct aiScene* scene
     DynamicArray* heightMaps = loadMaterialTextures(model, material, aiTextureType_SPECULAR, "texture_specular");
     insert(textures, textures->size, heightMaps->array, heightMaps->size);
 
-    fprintf(stdout, "I am here!\n");
     return createMesh(vertices, indices, textures);
 }
 
