@@ -16,7 +16,6 @@
 /* #define STB_IMAGE_IMPLEMENTATION */
 #include "stb_image.h"
 
-char* custom_strdup(const char* str);
 char* concatenatePath(const char* directory, const char* path);
 unsigned int TextureFromFile(const char* path, const char* directory, bool gamma);
 
@@ -192,14 +191,6 @@ DynamicArray* loadMaterialTextures(Model* model, struct aiMaterial* mat, enum ai
         }
     }
     return textures;
-}
-
-char* custom_strdup(const char* str) {
-    if (!str) return NULL;
-    size_t len = strlen(str) + 1;
-    char* copy = malloc(len);
-    if (copy) strcpy(copy, str);
-    return copy;
 }
 
 char* concatenatePath(const char* directory, const char* path) {

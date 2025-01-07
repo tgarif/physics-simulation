@@ -29,6 +29,14 @@ char* readFile(const char* filename) {
     return content;
 }
 
+char* custom_strdup(const char* str) {
+    if (!str) return NULL;
+    size_t len = strlen(str) + 1;
+    char* copy = malloc(len);
+    if (copy) strcpy(copy, str);
+    return copy;
+}
+
 void initialize(DynamicArray* dynArray, size_t initialCapacity, size_t elementSize) {
     dynArray->array = malloc(initialCapacity * elementSize);
     dynArray->size = 0;
@@ -71,4 +79,98 @@ void cleanup(DynamicArray* dynArray) {
     free(dynArray->array);
     dynArray->array = NULL;
     dynArray->size = dynArray->capacity = dynArray->elementSize = 0;
+}
+
+unsigned int hash(const char* key, size_t capacity) {
+    unsigned int hash = 0;
+    while (*key) {
+        hash = (hash * 31) + *key++;
+    }
+    return hash % capacity;
+}
+
+void rehash(DynamicHashMap* map) {
+    size_t oldCapacity = map->capacity;
+    KeyValue** oldTable = map->table;
+
+    // Double the capacity
+    map->capacityj *= 2;
+    map->table = malloc(map->capacity * sizeof(KeyValue*));
+    for (size_t i = 0; i < map->capacity; i++) {
+        map->table[i] = NULL;
+    }
+
+    // Re-insert all key-value pairs into the new table
+    for (size_t i = 0; i < oldCapacity; i++) {
+        KeyValue* current = oldTable[i];
+        while (current) {
+            KeyValue* next = current->next;
+            insert(map, current->key, current->value);
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+
+    free(oldTable);
+}
+
+void initHashMap(DynamicHashMap* map, size_t initialCapacity) {
+    map->capacity = initialCapacity;
+    map->size = 0;
+    map->table = malloc(initialCapacity * sizeof(KeyValue*));
+    for (size_t i = 0; i < initialCapacity; i++) {
+        map->table[i] = NULL;
+    }
+}
+
+void insertIntoHashMap(DynamicHashMap* map, const char* key, void* value) {
+    unsigned int index = hash(key, map->capacity);
+
+    KeyValue* current = map->table[index];
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+
+    // Insert a new key-value pair
+    KeyValue* newNode = malloc(sizeof(KeyValue));
+    newNode->key = custom_strdup(key);
+    newNode->value = value;
+    newNode->next = map->table[index];
+    map->table[index] = newNode;
+    map->size++;
+
+    // Resize if load factor exceeds 0.75
+    if ((float)map->size / map->capacity > 0.75) {
+        rehash(map);
+    }
+}
+
+void* getFromHashMap(DynamicHashMap* map, const char* key) {
+    unsigned int index = hash(key, map->capacity);
+    KeyValue* current = map->table[index];
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            return current->value;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+void freeHashMap(DynamicHashMap* map) {
+    for (size_t i = 0; i < map->capacity; i++) {
+        KeyValue* current = map->table[i];
+        while (current) {
+            KeyValue* next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(map->table);
 }
