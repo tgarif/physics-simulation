@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -91,13 +92,20 @@ void initMap(DynamicMap* map) {
 int compareKeys(Key a, Key b) {
     if (a.type != b.type) return 0;
 
+    float epsilon = 1e-6;
     switch (a.type) {
         case KEY_TYPE_STRING:
             return strcmp(a.strKey, b.strKey);
         case KEY_TYPE_INT:
             return a.intKey - b.intKey;
         case KEY_TYPE_FLOAT:
-            return (a.floatKey > b.floatKey) - (a.floatKey < b.floatKey);
+            if (fabs(a.floatKey - b.floatKey) < epsilon) {
+                return 0;
+            } else if (a.floatKey < b.floatKey) {
+                return -1;
+            } else {
+                return 1;
+            }
     }
 
     return 0;
@@ -135,7 +143,7 @@ void rightRotate(DynamicMap* map, Node* x) {
     } else {
         x->parent->left = y;
     }
-    x->right = x;
+    y->right = x;
     x->parent = y;
 }
 
@@ -187,10 +195,17 @@ void insertIntoMap(DynamicMap* map, Key key, void* value) {
 
     Node* y = map->nil;
     Node* x = map->root;
+    int cmp = 0;
 
     while (x != map->nil) {
         y = x;
-        if (compareKeys(key, x->key) < 0) {
+        cmp = compareKeys(key, x->key);
+
+        if (cmp == 0) {
+            x->value = value;
+            free(z);
+            return;
+        } else if (cmp < 0) {
             x = x->left;
         } else {
             x = x->right;
@@ -200,7 +215,7 @@ void insertIntoMap(DynamicMap* map, Key key, void* value) {
     z->parent = y;
     if (y == map->nil) {
         map->root = z;
-    } else if (compareKeys(key, y->key) < 0) {
+    } else if (cmp < 0) {
         y->left = z;
     } else {
         y->right = z;
@@ -224,11 +239,11 @@ void* getFromMap(DynamicMap* map, Key key) {
     return NULL;
 }
 
-void reverseInOrder(Node* node, Node* nil, void (*callback)(Key key, void* value)) {
+void reverseInOrder(Node* node, Node* nil, void (*callback)(Key key, void* value, void* context), void* context) {
     if (node == nil) return;
-    reverseInOrder(node->right, nil, callback);
-    callback(node->key, node->value);
-    reverseInOrder(node->left, nil, callback);
+    reverseInOrder(node->right, nil, callback, context);
+    callback(node->key, node->value, context);
+    reverseInOrder(node->left, nil, callback, context);
 }
 
 void freeTree(Node* node, Node* nil) {

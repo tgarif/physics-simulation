@@ -8,6 +8,7 @@
 #include "mathc.h"
 /* #include "model.h" */
 #include "shader.h"
+#include "util.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -29,6 +30,16 @@ void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadTexture(const char* path);
+
+void renderWindowModel(Key key, void* value, void* context) {
+    mfloat_t* windowVec3 = (mfloat_t*)value;
+    unsigned int shaderId = *(unsigned int*)context;
+    mfloat_t model[MAT4_SIZE];
+    mat4_identity(model);
+    mat4_translate(model, model, windowVec3);
+    setMat4fv(shaderId, "model", model);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
 
 int main() {
     glfwInit();
@@ -56,19 +67,22 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    stbi_set_flip_vertically_on_load(true);
+    /* stbi_set_flip_vertically_on_load(true); */
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glEnable(GL_STENCIL_TEST);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    /* glDepthFunc(GL_LESS); */
+    /* glEnable(GL_STENCIL_TEST); */
+    /* glStencilFunc(GL_NOTEQUAL, 1, 0xFF); */
+    /* glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE); */
     /* glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_REPLACE); */
     /* glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP); */
 
     /* unsigned int modelShader = createShader("shaders/model_loading_vertex.glsl", "shaders/model_loading_fragment.glsl"); */
-    unsigned int shaderId = createShader("shaders/depth_testing_vertex.glsl", "shaders/depth_testing_fragment.glsl");
-    unsigned int shaderSingleColorId = createShader("shaders/depth_testing_vertex.glsl", "shaders/depth_testing_fragment2.glsl");
+    /* unsigned int shaderId = createShader("shaders/depth_testing_vertex.glsl", "shaders/depth_testing_fragment.glsl"); */
+    /* unsigned int shaderSingleColorId = createShader("shaders/depth_testing_vertex.glsl", "shaders/depth_testing_fragment2.glsl"); */
+    unsigned int shaderId = createShader("shaders/blending_vertex.glsl", "shaders/blending_fragment.glsl");
 
     float cubeVertices[] = {
         // positions          // texture Coords
@@ -124,6 +138,16 @@ int main() {
         -5.0f, -0.5f, -5.0f, 0.0f, 2.0f,
         5.0f, -0.5f, -5.0f, 2.0f, 2.0f,  // Hello
     };
+    float transparentVertices[] = {
+        // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+        0.0f, 0.5f, 0.0f, 0.0f, 0.0f,
+        0.0f, -0.5f, 0.0f, 0.0f, 1.0f,
+        1.0f, -0.5f, 0.0f, 1.0f, 1.0f,
+
+        0.0f, 0.5f, 0.0f, 0.0f, 0.0f,
+        1.0f, -0.5f, 0.0f, 1.0f, 1.0f,
+        1.0f, 0.5f, 0.0f, 1.0f, 0.0f,  // Hello
+    };
 
     /* Model* ourModel = createModel("models/backpack.obj"); */
 
@@ -151,9 +175,30 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
+    // vegetation VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), &transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
 
     unsigned int cubeTexture = loadTexture("textures/marble.jpg");
     unsigned int floorTexture = loadTexture("textures/metal.png");
+    unsigned int transparentTexture = loadTexture("textures/blending_transparent_window.png");
+
+    DynamicArray windows;
+    initialize(&windows, 5, sizeof(mfloat_t[VEC3_SIZE]));
+    push(&windows, (mfloat_t[VEC3_SIZE]){-1.5f, 0.0f, -0.48f});
+    push(&windows, (mfloat_t[VEC3_SIZE]){1.5f, 0.0f, 0.51f});
+    push(&windows, (mfloat_t[VEC3_SIZE]){0.0f, 0.0f, 0.7f});
+    push(&windows, (mfloat_t[VEC3_SIZE]){-0.3f, 0.0f, -2.3f});
+    push(&windows, (mfloat_t[VEC3_SIZE]){0.5f, 0.0f, -0.6f});
 
     camera = createCamera((mfloat_t[]){0.0f, 0.0f, 3.0f});
 
@@ -167,10 +212,22 @@ int main() {
 
         processInput(window);
 
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        DynamicMap sorted;
+        initMap(&sorted);
 
-        glUseProgram(shaderSingleColorId);
+        for (size_t i = 0; i < windows.size; i++) {
+            mfloat_t* currentWindow = (mfloat_t*)((mfloat_t(*)[VEC3_SIZE])windows.array)[i];
+            mfloat_t subtractRes[VEC3_SIZE];
+            vec3_subtract(subtractRes, camera->position, currentWindow);
+            float distance = vec3_length(subtractRes);
+            Key key = {.type = KEY_TYPE_FLOAT, .floatKey = distance};
+            insertIntoMap(&sorted, key, currentWindow);
+        }
+
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(shaderId);
         // Projection matrix
         mfloat_t projection[MAT4_SIZE];
         // View matrix
@@ -178,30 +235,15 @@ int main() {
 
         mat4_identity(projection);
         mat4_perspective(projection, MRADIANS(camera->zoom), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
-        setMat4fv(shaderSingleColorId, "projection", projection);
-        getViewMatrix(camera, view);
-        setMat4fv(shaderSingleColorId, "view", view);
-
-        glUseProgram(shaderId);
         setMat4fv(shaderId, "projection", projection);
+        getViewMatrix(camera, view);
         setMat4fv(shaderId, "view", view);
 
-        glStencilMask(0x00);
-        mfloat_t model[MAT4_SIZE];
-        // Plane
-        glBindVertexArray(planeVAO);
-        glBindTexture(GL_TEXTURE_2D, floorTexture);
-        mat4_identity(model);
-        setMat4fv(shaderId, "model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
-
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
         // Cubes
         glBindVertexArray(cubeVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        mfloat_t model[MAT4_SIZE];
         mat4_identity(model);
         mat4_translate(model, model, (mfloat_t[]){-1.0f, 0.0f, -1.0f});
         setMat4fv(shaderId, "model", model);
@@ -211,35 +253,28 @@ int main() {
         setMat4fv(shaderId, "model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        // Floor
+        glBindVertexArray(planeVAO);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        mat4_identity(model);
+        setMat4fv(shaderId, "model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // Windows (from furthest to nearest)
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, transparentTexture);
+        reverseInOrder(sorted.root, sorted.nil, renderWindowModel, &shaderId);
+
+        /* for (size_t i = 0; i < windows->size; i++) { */
+        /*     mat4_identity(model); */
+        /*     mat4_translate(model, model, (mfloat_t*)((mfloat_t(*)[VEC3_SIZE])windows->array)[i]); */
+        /*     setMat4fv(shaderId, "model", model); */
+        /*     glDrawArrays(GL_TRIANGLES, 0, 6); */
+        /* } */
+
         /* drawMeshesInModel(ourModel, modelShader); */
 
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glDisable(GL_DEPTH_TEST);
-        glUseProgram(shaderSingleColorId);
-        float scale = 1.1f;
-        mfloat_t translated[MAT4_SIZE];
-        mfloat_t scaled[MAT4_SIZE];
-        // Cubes
-        glBindVertexArray(cubeVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, cubeTexture);
-        mat4_identity(model);
-        mat4_translate(translated, model, (mfloat_t[]){-1.0f, 0.0f, -1.0f});
-        mat4_scale(scaled, model, (mfloat_t[]){scale, scale, scale});
-        mat4_multiply(model, translated, scaled);
-        setMat4fv(shaderSingleColorId, "model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        mat4_identity(model);
-        mat4_translate(translated, model, (mfloat_t[]){2.0f, 0.0f, 0.0f});
-        mat4_scale(scaled, model, (mfloat_t[]){scale, scale, scale});
-        mat4_multiply(model, translated, scaled);
-        setMat4fv(shaderSingleColorId, "model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-        glStencilMask(0xFF);
-        glStencilFunc(GL_ALWAYS, 0, 0xFF);
-        glEnable(GL_DEPTH_TEST);
+        freeMap(&sorted);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -247,9 +282,12 @@ int main() {
 
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &planeVAO);
+    glDeleteVertexArrays(1, &transparentVAO);
     glDeleteBuffers(1, &cubeVBO);
     glDeleteBuffers(1, &planeVBO);
+    glDeleteBuffers(1, &transparentVBO);
 
+    cleanup(&windows);
     free(camera);
 
     glfwTerminate();
@@ -316,8 +354,8 @@ unsigned int loadTexture(const char* path) {
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 

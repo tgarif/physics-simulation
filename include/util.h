@@ -64,7 +64,7 @@ void rightRotate(DynamicMap* map, Node* x);
 void insertFixup(DynamicMap* map, Node* z);
 void insertIntoMap(DynamicMap* map, Key key, void* value);
 void* getFromMap(DynamicMap* map, Key key);
-void reverseInOrder(Node* node, Node* nil, void (*callback)(Key key, void* value));
+void reverseInOrder(Node* node, Node* nil, void (*callback)(Key key, void* value, void* context), void* context);
 void freeTree(Node* node, Node* nil);
 void freeMap(DynamicMap* map);
 
