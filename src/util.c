@@ -81,96 +81,164 @@ void cleanup(DynamicArray* dynArray) {
     dynArray->size = dynArray->capacity = dynArray->elementSize = 0;
 }
 
-unsigned int hash(const char* key, size_t capacity) {
-    unsigned int hash = 0;
-    while (*key) {
-        hash = (hash * 31) + *key++;
-    }
-    return hash % capacity;
+void initMap(DynamicMap* map) {
+    map->nil = malloc(sizeof(Node));
+    map->nil->color = 0;  // Black
+    map->nil->left = map->nil->right = map->nil->parent = NULL;
+    map->root = map->nil;
 }
 
-void rehash(DynamicHashMap* map) {
-    size_t oldCapacity = map->capacity;
-    KeyValue** oldTable = map->table;
+int compareKeys(Key a, Key b) {
+    if (a.type != b.type) return 0;
 
-    // Double the capacity
-    map->capacityj *= 2;
-    map->table = malloc(map->capacity * sizeof(KeyValue*));
-    for (size_t i = 0; i < map->capacity; i++) {
-        map->table[i] = NULL;
+    switch (a.type) {
+        case KEY_TYPE_STRING:
+            return strcmp(a.strKey, b.strKey);
+        case KEY_TYPE_INT:
+            return a.intKey - b.intKey;
+        case KEY_TYPE_FLOAT:
+            return (a.floatKey > b.floatKey) - (a.floatKey < b.floatKey);
     }
 
-    // Re-insert all key-value pairs into the new table
-    for (size_t i = 0; i < oldCapacity; i++) {
-        KeyValue* current = oldTable[i];
-        while (current) {
-            KeyValue* next = current->next;
-            insert(map, current->key, current->value);
-            free(current->key);
-            free(current);
-            current = next;
+    return 0;
+}
+
+void leftRotate(DynamicMap* map, Node* x) {
+    Node* y = x->right;
+    x->right = y->left;
+    if (y->left != map->nil) {
+        y->left->parent = x;
+    }
+    y->parent = x->parent;
+    if (x->parent == map->nil) {
+        map->root = y;
+    } else if (x == x->parent->left) {
+        x->parent->left = y;
+    } else {
+        x->parent->right = y;
+    }
+    y->left = x;
+    x->parent = y;
+}
+
+void rightRotate(DynamicMap* map, Node* x) {
+    Node* y = x->left;
+    x->left = y->right;
+    if (y->right != map->nil) {
+        y->right->parent = x;
+    }
+    y->parent = x->parent;
+    if (x->parent == map->nil) {
+        map->root = y;
+    } else if (x == x->parent->right) {
+        x->parent->right = y;
+    } else {
+        x->parent->left = y;
+    }
+    x->right = x;
+    x->parent = y;
+}
+
+void insertFixup(DynamicMap* map, Node* z) {
+    while (z->parent->color == 1) {
+        if (z->parent == z->parent->parent->left) {
+            Node* y = z->parent->parent->right;
+            if (y->color == 1) {
+                z->parent->color = 0;
+                y->color = 0;
+                z->parent->parent->color = 1;
+                z = z->parent->parent;
+            } else {
+                if (z == z->parent->right) {
+                    z = z->parent;
+                    leftRotate(map, z);
+                }
+                z->parent->color = 0;
+                z->parent->parent->color = 1;
+                rightRotate(map, z->parent->parent);
+            }
+        } else {
+            Node* y = z->parent->parent->left;
+            if (y->color == 1) {
+                z->parent->color = 0;
+                y->color = 0;
+                z->parent->parent->color = 1;
+                z = z->parent->parent;
+            } else {
+                if (z == z->parent->left) {
+                    z = z->parent;
+                    rightRotate(map, z);
+                }
+                z->parent->color = 0;
+                z->parent->parent->color = 1;
+                leftRotate(map, z->parent->parent);
+            }
+        }
+    }
+    map->root->color = 0;
+}
+
+void insertIntoMap(DynamicMap* map, Key key, void* value) {
+    Node* z = malloc(sizeof(Node));
+    z->key = key;
+    z->value = value;
+    z->color = 1;
+    z->left = z->right = map->nil;
+
+    Node* y = map->nil;
+    Node* x = map->root;
+
+    while (x != map->nil) {
+        y = x;
+        if (compareKeys(key, x->key) < 0) {
+            x = x->left;
+        } else {
+            x = x->right;
         }
     }
 
-    free(oldTable);
-}
-
-void initHashMap(DynamicHashMap* map, size_t initialCapacity) {
-    map->capacity = initialCapacity;
-    map->size = 0;
-    map->table = malloc(initialCapacity * sizeof(KeyValue*));
-    for (size_t i = 0; i < initialCapacity; i++) {
-        map->table[i] = NULL;
-    }
-}
-
-void insertIntoHashMap(DynamicHashMap* map, const char* key, void* value) {
-    unsigned int index = hash(key, map->capacity);
-
-    KeyValue* current = map->table[index];
-    while (current) {
-        if (strcmp(current->key, key) == 0) {
-            current->value = value;
-            return;
-        }
-        current = current->next;
+    z->parent = y;
+    if (y == map->nil) {
+        map->root = z;
+    } else if (compareKeys(key, y->key) < 0) {
+        y->left = z;
+    } else {
+        y->right = z;
     }
 
-    // Insert a new key-value pair
-    KeyValue* newNode = malloc(sizeof(KeyValue));
-    newNode->key = custom_strdup(key);
-    newNode->value = value;
-    newNode->next = map->table[index];
-    map->table[index] = newNode;
-    map->size++;
-
-    // Resize if load factor exceeds 0.75
-    if ((float)map->size / map->capacity > 0.75) {
-        rehash(map);
-    }
+    insertFixup(map, z);
 }
 
-void* getFromHashMap(DynamicHashMap* map, const char* key) {
-    unsigned int index = hash(key, map->capacity);
-    KeyValue* current = map->table[index];
-    while (current) {
-        if (strcmp(current->key, key) == 0) {
+void* getFromMap(DynamicMap* map, Key key) {
+    Node* current = map->root;
+    while (current != map->nil) {
+        int cmp = compareKeys(key, current->key);
+        if (cmp == 0) {
             return current->value;
+        } else if (cmp < 0) {
+            current = current->left;
+        } else {
+            current = current->right;
         }
-        current = current->next;
     }
     return NULL;
 }
 
-void freeHashMap(DynamicHashMap* map) {
-    for (size_t i = 0; i < map->capacity; i++) {
-        KeyValue* current = map->table[i];
-        while (current) {
-            KeyValue* next = current->next;
-            free(current->key);
-            free(current);
-            current = next;
-        }
-    }
-    free(map->table);
+void reverseInOrder(Node* node, Node* nil, void (*callback)(Key key, void* value)) {
+    if (node == nil) return;
+    reverseInOrder(node->right, nil, callback);
+    callback(node->key, node->value);
+    reverseInOrder(node->left, nil, callback);
+}
+
+void freeTree(Node* node, Node* nil) {
+    if (node == nil) return;
+    freeTree(node->left, nil);
+    freeTree(node->right, nil);
+    free(node);
+}
+
+void freeMap(DynamicMap* map) {
+    freeTree(map->root, map->nil);
+    free(map->nil);
 }
